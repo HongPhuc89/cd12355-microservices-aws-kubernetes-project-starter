@@ -1,11 +1,8 @@
-import logging
 import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
-from flask import jsonify, request
-from sqlalchemy import and_, text
-from random import randint
+from flask import jsonify
+from sqlalchemy import text
 
 from config import app, db
 
@@ -50,7 +47,7 @@ def get_daily_visits():
 
 @app.route("/api/reports/daily_usage", methods=["GET"])
 def daily_visits():
-    return jsonify(get_daily_visits)
+    return jsonify(get_daily_visits())
 
 
 @app.route("/api/reports/user_visits", methods=["GET"])
@@ -73,7 +70,6 @@ def all_user_visits():
             "visits": row[1],
             "joined_at": str(row[2])
         }
-    
     return jsonify(response)
 
 
