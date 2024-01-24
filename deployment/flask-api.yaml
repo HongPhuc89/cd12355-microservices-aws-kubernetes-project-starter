@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-api
+spec:
+  selector:
+    app.kubernetes.io/name: flask-api
+  ports:
+    - name: "5153"
+      protocol: TCP
+      port: 5153
+      targetPort: 5153
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-api
+  labels:
+    name: flask-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: flask-api
+  template:
+    metadata:
+      labels:
+        service: flask-api
+    spec:
+      containers:
+        - name: analytics-app
+          image: 200107474822.dkr.ecr.us-east-1.amazonaws.com/phucnh6-cd12355:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /health_check
+              port: 5153
+            initialDelaySeconds: 5
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: "/readiness_check"
+              port: 5153
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: database-env
+                  key: DB_USERNAME
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: database-env
+                  key: DB_NAME
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: database-env
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: database-env
+                  key: DB_PORT
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD
+      restartPolicy: Always
