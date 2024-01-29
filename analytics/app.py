@@ -28,6 +28,7 @@ def health_check():
 def readiness_check():
     try:
         count = db.session.query(Token).count()
+        app.logger.info(f"Found {count} tokens")
     except Exception as e:
         app.logger.error(e)
         return "failed", 500
