@@ -1,13 +1,22 @@
 import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import jsonify
-from sqlalchemy import text
-
 from config import app, db
-
+from flask import jsonify
+from sqlalchemy import Column, DateTime, Integer, String, text
+from sqlalchemy.ext.declarative import declarative_base
 
 port_number = int(os.environ.get("APP_PORT", 5153))
+Base = declarative_base()
+
+
+class Token(Base):
+    __tablename__ = "tokens"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    token = Column(String)
+    created_at = Column(DateTime)
+    used_at = Column(DateTime)
 
 
 @app.route("/health_check")
@@ -28,13 +37,17 @@ def readiness_check():
 
 def get_daily_visits():
     with app.app_context():
-        result = db.session.execute(text("""
+        result = db.session.execute(
+            text(
+                """
         SELECT Date(created_at) AS date,
             Count(*)         AS visits
         FROM   tokens
         WHERE  used_at IS NOT NULL
         GROUP  BY Date(created_at)
-        """))
+        """
+            )
+        )
 
         response = {}
         for row in result:
@@ -52,7 +65,9 @@ def daily_visits():
 
 @app.route("/api/reports/user_visits", methods=["GET"])
 def all_user_visits():
-    result = db.session.execute(text("""
+    result = db.session.execute(
+        text(
+            """
     SELECT t.user_id,
         t.visits,
         users.joined_at
@@ -62,19 +77,18 @@ def all_user_visits():
             GROUP  BY user_id) AS t
         LEFT JOIN users
                 ON t.user_id = users.id;
-    """))
+    """
+        )
+    )
 
     response = {}
     for row in result:
-        response[row[0]] = {
-            "visits": row[1],
-            "joined_at": str(row[2])
-        }
+        response[row[0]] = {"visits": row[1], "joined_at": str(row[2])}
     return jsonify(response)
 
 
 scheduler = BackgroundScheduler()
-job = scheduler.add_job(get_daily_visits, 'interval', seconds=30)
+job = scheduler.add_job(get_daily_visits, "interval", seconds=30)
 scheduler.start()
 
 if __name__ == "__main__":
